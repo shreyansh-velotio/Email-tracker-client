@@ -17,6 +17,7 @@ import timesliceHelper from "./helper/timeslice.helper";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import AlarmIcon from "@mui/icons-material/Alarm";
+import LoadingButton from "@mui/lab/LoadingButton";
 
 function Row(props) {
   const { row } = props;
@@ -46,7 +47,7 @@ function Row(props) {
 
   const frequencyChange = (row, frequency) => {
     setFrequency(frequency);
-    if (row.frequency != frequency) {
+    if (row.frequency !== frequency) {
       setActive(true);
     } else {
       setActive(false);
@@ -101,7 +102,7 @@ function Row(props) {
                 <Button
                   variant="contained"
                   endIcon={<AlarmIcon />}
-                  onClick={() => updateCron(row.id, frequency)}
+                  onClick={() => updateCron(row.id, Number(frequency))}
                 >
                   Update
                 </Button>
@@ -153,6 +154,25 @@ function Row(props) {
 
 export default function CollapsibleTable() {
   const [rows, setRows] = React.useState([]);
+  const [message, setMessage] = React.useState("Hello World");
+  const [frequency, setFrequency] = React.useState(1800);
+  const [loading, setLoading] = React.useState(false);
+
+  function handleClick() {
+    setLoading(true);
+
+    fetch(
+      `http://localhost:5000/cron?frequency=${frequency}&message=${message}`,
+      {
+        method: "POST",
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => {
+        setRows([...rows, res]);
+      });
+    setLoading(false);
+  }
 
   const getCrons = () => {
     fetch("http://localhost:5000/cron")
@@ -183,6 +203,33 @@ export default function CollapsibleTable() {
           ))}
         </TableBody>
       </Table>
+      <Stack spacing={2} minWidth={"250px"} maxWidth={"500px"} margin={"50px"}>
+        <TextField
+          required
+          id="outlined-required"
+          label="Message to be sent"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <TextField
+          id="outlined-number"
+          label="Frequency (seconds)"
+          type="number"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          value={frequency}
+          onChange={(e) => setFrequency(e.target.value)}
+        />
+        <LoadingButton
+          onClick={handleClick}
+          loading={loading}
+          loadingIndicator="Creating..."
+          variant="outlined"
+        >
+          CREATE A CRON
+        </LoadingButton>
+      </Stack>
     </TableContainer>
   );
 }
