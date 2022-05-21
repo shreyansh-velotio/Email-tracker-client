@@ -128,20 +128,22 @@ function Row(props) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {history.map((historyRow) => (
-                    <TableRow key={historyRow.id}>
-                      <TableCell>{historyRow.emailSender}</TableCell>
-                      <TableCell>{historyRow.emailReceiver}</TableCell>
-                      <TableCell component="th" scope="row">
-                        {`${historyRow.sentAt} (${timesliceHelper(
-                          new Date(historyRow.sentAt)
-                        )})`}
-                      </TableCell>
-                      <TableCell>
-                        {historyRow.isEmailSent === true ? "✅" : "❌"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {history &&
+                    history.length > 0 &&
+                    history.map((historyRow) => (
+                      <TableRow key={historyRow.id}>
+                        <TableCell>{historyRow.emailSender}</TableCell>
+                        <TableCell>{historyRow.emailReceiver}</TableCell>
+                        <TableCell component="th" scope="row">
+                          {`${historyRow.sentAt} (${timesliceHelper(
+                            new Date(historyRow.sentAt)
+                          )})`}
+                        </TableCell>
+                        <TableCell>
+                          {historyRow.isEmailSent === true ? "✅" : "❌"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             </Box>
@@ -203,33 +205,40 @@ export default function CollapsibleTable() {
           ))}
         </TableBody>
       </Table>
-      <Stack spacing={2} minWidth={"250px"} maxWidth={"500px"} margin={"50px"}>
-        <TextField
-          required
-          id="outlined-required"
-          label="Message to be sent"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
-        <TextField
-          id="outlined-number"
-          label="Frequency (seconds)"
-          type="number"
-          InputLabelProps={{
-            shrink: true,
-          }}
-          value={frequency}
-          onChange={(e) => setFrequency(e.target.value)}
-        />
-        <LoadingButton
-          onClick={handleClick}
-          loading={loading}
-          loadingIndicator="Creating..."
-          variant="outlined"
-        >
-          CREATE A CRON
-        </LoadingButton>
-      </Stack>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <Stack spacing={2} minHeight="100vh" margin={"50px"}>
+          <TextField
+            required
+            id="outlined-required"
+            label="Message to be sent"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <TextField
+            id="outlined-number"
+            label="Frequency (seconds)"
+            type="number"
+            InputLabelProps={{
+              shrink: true,
+            }}
+            value={frequency}
+            onChange={(e) => setFrequency(e.target.value)}
+          />
+          <LoadingButton
+            onClick={handleClick}
+            loading={loading}
+            loadingIndicator="Creating..."
+            variant="outlined"
+          >
+            CREATE A CRON
+          </LoadingButton>
+        </Stack>
+      </Box>
     </TableContainer>
   );
 }
