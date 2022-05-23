@@ -27,7 +27,7 @@ function Row(props) {
   const [active, setActive] = React.useState(false);
 
   const getJobHistory = () => {
-    fetch(`http://localhost:5000/cron/jobs?id=${row.id}`)
+    fetch(`http://localhost:5000/api/cron-job/history?id=${row.id}`)
       .then((res) => res.json())
       .then((res) => {
         setHistory(res);
@@ -35,7 +35,7 @@ function Row(props) {
   };
 
   const updateCron = (id, frequency) => {
-    fetch(`http://localhost:5000/cron?id=${id}&frequency=${frequency}`, {
+    fetch(`http://localhost:5000/api/cron?id=${id}&frequency=${frequency}`, {
       method: "PATCH",
     })
       .then((res) => res.json())
@@ -164,7 +164,7 @@ export default function CollapsibleTable() {
     setLoading(true);
 
     fetch(
-      `http://localhost:5000/cron?frequency=${frequency}&message=${message}`,
+      `http://localhost:5000/api/cron?frequency=${frequency}&message=${message}`,
       {
         method: "POST",
       }
@@ -177,7 +177,7 @@ export default function CollapsibleTable() {
   }
 
   const getCrons = () => {
-    fetch("http://localhost:5000/cron")
+    fetch("http://localhost:5000/api/cron")
       .then((res) => res.json())
       .then((res) => {
         setRows(res);
