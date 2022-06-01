@@ -18,6 +18,8 @@ import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import AlarmIcon from "@mui/icons-material/Alarm";
 import LoadingButton from "@mui/lab/LoadingButton";
+import Bar from "./bar";
+import Swal from "sweetalert2";
 
 function Row(props) {
   const { row } = props;
@@ -26,22 +28,52 @@ function Row(props) {
   const [frequency, setFrequency] = React.useState(row.frequency);
   const [active, setActive] = React.useState(false);
 
-  const getJobHistory = () => {
-    fetch(`http://localhost:5000/api/cron-job/history?id=${row.id}`)
+  const getJobHistory = (token) => {
+    fetch(`http://localhost:5000/api/cron-job/history?id=${row.id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => res.json())
       .then((res) => {
         setHistory(res);
       });
   };
 
-  const updateCron = (id, frequency) => {
-    fetch(`http://localhost:5000/api/cron?id=${id}&frequency=${frequency}`, {
+  const updateCron = (id, frequency, token) => {
+    fetch(`http://localhost:5000/api/cron`, {
       method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        id,
+        frequency,
+      }),
     })
       .then((res) => res.json())
       .then((res) => {
-        setActive(false);
-        row.frequency = frequency;
+        if (res.statusCode) {
+          const { message } = res;
+          Swal.fire({
+            position: "top-end",
+            icon: "error",
+            title: "Error",
+            text: message,
+            showConfirmButton: true,
+          });
+        } else {
+          Swal.fire({
+            position: "top-end",
+            icon: "success",
+            title: "Cron has been updated",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+          setActive(false);
+          row.frequency = frequency;
+        }
       });
   };
 
@@ -61,7 +93,7 @@ function Row(props) {
             aria-label="expand row"
             size="small"
             onClick={() => {
-              getJobHistory();
+              getJobHistory(props.token);
               setOpen(!open);
             }}
           >
@@ -89,23 +121,34 @@ function Row(props) {
                 InputLabelProps={{
                   shrink: true,
                 }}
+                InputProps={{
+                  inputProps: {
+                    min: 5,
+                  },
+                }}
                 value={frequency}
                 onChange={(e) => {
                   frequencyChange(row, e.target.value);
                 }}
               />
-              {!active ? (
-                <Button variant="contained" endIcon={<AlarmIcon />} disabled>
-                  Update
-                </Button>
+              {localStorage.getItem("role") === btoa("admin") ? (
+                !active ? (
+                  <Button variant="contained" endIcon={<AlarmIcon />} disabled>
+                    Update
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    endIcon={<AlarmIcon />}
+                    onClick={() =>
+                      updateCron(row.id, Number(frequency), props.token)
+                    }
+                  >
+                    Update
+                  </Button>
+                )
               ) : (
-                <Button
-                  variant="contained"
-                  endIcon={<AlarmIcon />}
-                  onClick={() => updateCron(row.id, Number(frequency))}
-                >
-                  Update
-                </Button>
+                <></>
               )}
             </Stack>
           </Box>
@@ -154,30 +197,68 @@ function Row(props) {
   );
 }
 
-export default function CollapsibleTable() {
+export default function CollapsibleTable({ token, setToken }) {
   const [rows, setRows] = React.useState([]);
   const [message, setMessage] = React.useState("Hello World");
   const [frequency, setFrequency] = React.useState(1800);
   const [loading, setLoading] = React.useState(false);
 
   function handleClick() {
+    if (frequency < 5) {
+      Swal.fire({
+        position: "top-end",
+        icon: "error",
+        title: "Error",
+        text: "frequency must be atleast greater than or equal to 5 seconds",
+        showConfirmButton: true,
+      });
+
+      return;
+    }
     setLoading(true);
 
-    fetch(
-      `http://localhost:5000/api/cron?frequency=${frequency}&message=${message}`,
-      {
-        method: "POST",
-      }
-    )
+    fetch(`http://localhost:5000/api/cron`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        frequency,
+        message,
+      }),
+    })
       .then((res) => res.json())
       .then((res) => {
-        setRows([...rows, res]);
+        if (res.statusCode) {
+          const { message } = res;
+          Swal.fire({
+            position: "top-end",
+            icon: "error",
+            title: "Error",
+            text: message,
+            showConfirmButton: true,
+          });
+        } else {
+          Swal.fire({
+            position: "top-end",
+            icon: "success",
+            title: "New cron has been created",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+          setRows([...rows, res]);
+        }
       });
     setLoading(false);
   }
 
   const getCrons = () => {
-    fetch("http://localhost:5000/api/cron")
+    fetch("http://localhost:5000/api/cron", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => res.json())
       .then((res) => {
         setRows(res);
@@ -186,59 +267,67 @@ export default function CollapsibleTable() {
 
   React.useEffect(() => {
     getCrons();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <TableContainer component={Paper}>
-      <Table aria-label="collapsible table">
-        <TableHead>
-          <TableRow>
-            <TableCell />
-            <TableCell>Cron id</TableCell>
-            <TableCell align="right">Message</TableCell>
-            <TableCell align="right">Frequency</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <Row key={row.id} row={row} />
-          ))}
-        </TableBody>
-      </Table>
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <Stack spacing={2} minHeight="100vh" margin={"50px"}>
-          <TextField
-            required
-            id="outlined-required"
-            label="Message to be sent"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-          <TextField
-            id="outlined-number"
-            label="Frequency (seconds)"
-            type="number"
-            InputLabelProps={{
-              shrink: true,
-            }}
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value)}
-          />
-          <LoadingButton
-            onClick={handleClick}
-            loading={loading}
-            loadingIndicator="Creating..."
-            variant="outlined"
-          >
-            CREATE A CRON
-          </LoadingButton>
-        </Stack>
-      </Box>
-    </TableContainer>
+    <>
+      <Bar setToken={setToken} />
+      <div style={{ display: "flex" }}>
+        {localStorage.getItem("role") === btoa("admin") && (
+          <Box minHeight="100vh" minWidth={"30vw"}>
+            <Stack spacing={2} minHeight="100vh" margin={"50px"}>
+              <TextField
+                required
+                id="outlined-required"
+                label="Message to be sent"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <TextField
+                id="outlined-number"
+                label="Frequency (seconds)"
+                type="number"
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                InputProps={{
+                  inputProps: {
+                    min: 5,
+                  },
+                }}
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+              />
+              <LoadingButton
+                onClick={handleClick}
+                loading={loading}
+                loadingIndicator="Creating..."
+                variant="outlined"
+              >
+                CREATE A CRON
+              </LoadingButton>
+            </Stack>
+          </Box>
+        )}
+        <TableContainer component={Paper}>
+          <Table aria-label="collapsible table">
+            <TableHead>
+              <TableRow>
+                <TableCell />
+                <TableCell>Cron id</TableCell>
+                <TableCell align="right">Message</TableCell>
+                <TableCell align="right">Frequency</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.map((row) => (
+                <Row key={row.id} row={row} token={token} />
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </div>
+    </>
   );
 }
