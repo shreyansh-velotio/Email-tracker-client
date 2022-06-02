@@ -20,24 +20,49 @@ import AlarmIcon from "@mui/icons-material/Alarm";
 import LoadingButton from "@mui/lab/LoadingButton";
 import Bar from "./bar";
 import Swal from "sweetalert2";
+import { TableFooter, TablePagination } from "@mui/material";
+import { TablePaginationActions } from "./tablePagination";
 
 function Row(props) {
   const { row } = props;
   const [open, setOpen] = React.useState(false);
   const [history, setHistory] = React.useState([]);
+  const [total, setTotal] = React.useState(0);
   const [frequency, setFrequency] = React.useState(row.frequency);
   const [active, setActive] = React.useState(false);
+  const [page, setPage] = React.useState(0);
+  const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
-  const getJobHistory = (token) => {
-    fetch(`http://localhost:5000/api/cron-job/history?id=${row.id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+  const getJobHistory = (token, page, limit) => {
+    const pageString = `&page=${page}`;
+    const limitString = `&limit=${limit > 0 ? limit : total}`;
+    fetch(
+      `http://localhost:5000/api/cron-job/history?id=${row.id}${
+        page ? pageString : ""
+      }${limit ? limitString : ""}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
       .then((res) => res.json())
       .then((res) => {
-        setHistory(res);
+        if (res.result) setHistory(res.result);
+        if (res.total) setTotal(res.total);
       });
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+
+    getJobHistory(props.token, newPage + 1, rowsPerPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    getJobHistory(props.token, 1, event.target.value);
+    setRowsPerPage(parseInt(event.target.value));
+    setPage(0);
   };
 
   const updateCron = (id, frequency, token) => {
@@ -85,6 +110,15 @@ function Row(props) {
       setActive(false);
     }
   };
+
+  const onJobHistoryOpen = (token) => {
+    if (open) {
+      setOpen(false);
+    } else {
+      getJobHistory(token);
+      setOpen(true);
+    }
+  };
   return (
     <React.Fragment>
       <TableRow sx={{ "& > *": { borderBottom: "unset" } }}>
@@ -92,10 +126,7 @@ function Row(props) {
           <IconButton
             aria-label="expand row"
             size="small"
-            onClick={() => {
-              getJobHistory(props.token);
-              setOpen(!open);
-            }}
+            onClick={() => onJobHistoryOpen(props.token)}
           >
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
@@ -190,6 +221,33 @@ function Row(props) {
                 </TableBody>
               </Table>
             </Box>
+            <Table>
+              <TableFooter>
+                <TableRow>
+                  <TablePagination
+                    rowsPerPageOptions={[
+                      5,
+                      10,
+                      15,
+                      { label: "All", value: -1 },
+                    ]}
+                    colSpan={3}
+                    count={total}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    SelectProps={{
+                      inputProps: {
+                        "aria-label": "rows per page",
+                      },
+                      native: true,
+                    }}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    ActionsComponent={TablePaginationActions}
+                  />
+                </TableRow>
+              </TableFooter>
+            </Table>
           </Collapse>
         </TableCell>
       </TableRow>
