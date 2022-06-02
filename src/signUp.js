@@ -69,21 +69,31 @@ export default function SignUp() {
       .then((data) => data.json())
       .then((data) => {
         const { statusCode, message } = data;
-        if ((statusCode === 400 || statusCode === 409) && message) {
-          Swal.fire({
-            position: "top-end",
-            icon: "error",
-            title: "Error",
-            text: message,
-            showConfirmButton: true,
-          });
+        if (statusCode) {
+          if ((statusCode === 400 || statusCode === 409) && message) {
+            Swal.fire({
+              position: "top-end",
+              icon: "error",
+              title: "Error",
+              text: message,
+              showConfirmButton: true,
+            });
+          } else {
+            Swal.fire({
+              position: "top-end",
+              icon: "error",
+              title: "Error",
+              text: "Something went wrong",
+              showConfirmButton: true,
+            });
+          }
         } else {
           Swal.fire({
             position: "top-end",
-            icon: "error",
-            title: "Error",
-            text: "Something went wrong",
-            showConfirmButton: true,
+            icon: "success",
+            title: "User has been created",
+            showConfirmButton: false,
+            timer: 1000,
           });
         }
       });
